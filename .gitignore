@@ -396,8 +396,6 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-Get Subtitles.exe
-sudoku.exe
 # JetBrains Rider
 *.sln.iml
 
