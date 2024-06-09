@@ -44,7 +44,8 @@ Mat* matGetRow(Mat* m, size_t row_num);//returns matrix that is made out a singl
 void matCopy(Mat* dst, Mat* src);//copys data of the src matrix to the dst matrix
 void matPrint(Mat* m, char* name, size_t padding);//prints a matrix
 void matSig(Mat* m);//runs the sigmoid function on all of the matrix's data
-void matMerge(Mat* output, Mat* m1, Mat* m2); // function for merging matrixes (combines from the rows)
+void matRelu(Mat* m);// runs the relu function on all of the matrx's data
+void matMerge(Mat* output, Mat* m1, Mat* m2); // function for merging matrixes (combines from the columns), opposite of matSplit
 void matSplit(Mat* complete_mat, Mat* m1, Mat* m2, size_t col_num); // function splits a matrix into two matrixes (splits by the columns)
 void matSave(FILE* output_file, Mat* matrix); // function for saving a matrix in a file
 Mat* matLoad(FILE* input_file); // function for loading a matrix from a file (copying it to the given pointer)
@@ -81,12 +82,30 @@ void nnFree(nn* network);//frees the dynamiclly allocated data of a network
 
 #ifdef NN_IMPL
 
-bool USE_SIG = true;
+bool USE_SIG = false;
+bool USE_RELU = true;
 
 
-void useSig(bool value)
+void useSig()
 {
-	USE_SIG = value;
+	if (USE_RELU)
+	{
+		fprintf(stderr, "Already using relu");
+		exit(1);
+	}
+
+	USE_SIG = true;
+}
+
+void useRelu()
+{
+	if (USE_SIG)
+	{
+		fprintf(stderr, "Already using sigmoid");
+		exit(1);
+	}
+
+	USE_RELU = true;
 }
 
 
@@ -99,6 +118,16 @@ float rand_float(void)
 float sigmoidf(float x)
 {
 	return 1.f / (1.f + expf(-x));
+}
+
+float reluf(float x)
+{
+	if (x > 0)
+	{
+		return x;
+	}
+
+	return 0.0;
 }
 
 
@@ -253,6 +282,17 @@ void matSig(Mat* m)
 		for (size_t cols = 0; cols < m->cols; cols++)
 		{
 			MAT_AT(m, rows, cols) = sigmoidf(MAT_AT(m, rows, cols));
+		}
+	}
+}
+
+void matRelu(Mat* m)
+{
+	for (size_t rows = 0; rows < m->rows; rows++)
+	{
+		for (size_t cols = 0; cols < m->cols; cols++)
+		{
+			MAT_AT(m, rows, cols) = reluf(MAT_AT(m, rows, cols));
 		}
 	}
 }
@@ -501,6 +541,11 @@ void nnForward(nn* network)
 		if (USE_SIG)
 		{
 			matSig(network->as[i + 1]);
+		}
+
+		if (USE_RELU)
+		{
+			matRelu(network->as[i + 1]);
 		}
 	}
 }

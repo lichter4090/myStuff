@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 
 	nn* network = nnAlloc(arch, arch_size);
 	nn* gradient = nnAlloc(arch, arch_size);
-	nnRand(network, 0, 0.1f);
+	nnRand(network, -5, 5);
 
 	FILE* in = fopen(data_file_path, "rb");
 	FILE* test_in = fopen(test_file_path, "rb");
@@ -87,16 +87,16 @@ int main(int argc, char** argv)
 	matSplit(data, input, output, input_size);
 	matSplit(test, test_input, test_output, input_size);
 
-	float rate = 0.05;
+	float rate = 0.5;
 
-	useSig(true);
+	useRelu();
 
 	for (size_t i = 0; i < MAX_ITERATION; i++)
 	{
 		nnBackProp(network, gradient, input, output);
 		nnApplyGradient(network, gradient, rate);
 
-		if (i % 1 == 0)
+		if (i % 100 == 0)
 			printf("cost=%f, epoch=%zu\n", nnCostFunc(network, input, output), i);
 	}
 
@@ -106,24 +106,6 @@ int main(int argc, char** argv)
 	for (size_t i = 0; i < test_input->rows; i++)
 	{
 		row_of_input = matGetRow(test_input, i);
-
-		
-		//for (int i = 0; i < row_of_input->cols; i++)
-		//{
-		//	if (i % 28 == 0)
-		//		printf("\n");
-		//
-		//	uint8_t pixel = (uint8_t)(MAT_AT(row_of_input, 0, i) * 255.f);
-		//
-		//	if (pixel)
-		//	{
-		//		printf("%3u ", pixel);
-		//	}
-		//	else
-		//	{
-		//		printf("    ");
-		//	}
-		//}
 
 		matCopy(NN_INPUT(network), row_of_input);
 		matFree(row_of_input);
