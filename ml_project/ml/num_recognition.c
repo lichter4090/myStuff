@@ -7,6 +7,44 @@
 
 const size_t MAX_ITERATION = 10000;
 
+void validate(nn* network, Mat* test_input, Mat* test_output)
+{
+	Mat* row_of_input = NULL;
+	int stats = 0;
+
+	for (size_t i = 0; i < test_input->rows; i++)
+	{
+		row_of_input = matGetRow(test_input, i);
+
+		matCopy(NN_INPUT(network), row_of_input);
+		matFree(row_of_input);
+
+		nnForward(network);
+
+		int actual_num = 0;
+		int nn_thinks_that = 0;
+		int grade = 0;
+
+		for (size_t j = 0; j < test_output->cols; j++)
+		{
+			if (MAT_AT(test_output, i, j) == 1)
+				actual_num = (int)j;
+		}
+
+		for (size_t j = 0; j < test_output->cols; j++)
+		{
+			if (MAT_AT(NN_OUTPUT(network), i, j) > grade)
+				nn_thinks_that = (int)j;
+		}
+
+		if (actual_num == nn_thinks_that)
+		{
+			stats++;
+		}
+	}
+
+	printf("Validate=%.2f\n", (float)stats / test_input->rows);
+}
 
 
 int main(int argc, char** argv)
@@ -46,7 +84,7 @@ int main(int argc, char** argv)
 
 	nn* network = nnAlloc(arch, arch_size);
 	nn* gradient = nnAlloc(arch, arch_size);
-	nnRand(network, -5, 5);
+	nnRand(network, -1, 1);
 
 	FILE* in = fopen(data_file_path, "rb");
 	FILE* test_in = fopen(test_file_path, "rb");
@@ -87,18 +125,23 @@ int main(int argc, char** argv)
 	matSplit(data, input, output, input_size);
 	matSplit(test, test_input, test_output, input_size);
 
-	float rate = 0.5;
+
+	float rate = 0.001;
 
 	useRelu();
-
+	printf("%d\n", (int)input->rows);
 	for (size_t i = 0; i < MAX_ITERATION; i++)
 	{
 		nnBackProp(network, gradient, input, output);
 		nnApplyGradient(network, gradient, rate);
 
-		if (i % 100 == 0)
+		if (i % 10 == 0)
+		{
 			printf("cost=%f, epoch=%zu\n", nnCostFunc(network, input, output), i);
+			validate(network, test_input, test_output);
+		}
 	}
+
 
 	Mat* row_of_input = NULL;
 	int stats = 0;

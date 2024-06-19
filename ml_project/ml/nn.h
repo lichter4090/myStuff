@@ -538,6 +538,12 @@ void nnForward(nn* network)
 		matDot(network->as[i + 1], network->as[i], network->ws[i]);
 		matSum(network->as[i + 1], network->bs[i]);
 
+		if (network->num_of_layers - 1 == i)
+		{
+			matSig(network->as[i + 1]);
+			continue;
+		}
+
 		if (USE_SIG)
 		{
 			matSig(network->as[i + 1]);
@@ -547,6 +553,29 @@ void nnForward(nn* network)
 		{
 			matRelu(network->as[i + 1]);
 		}
+
+
+		//for (int i = 0; i < 784; i++)
+		//{
+		//	if (i % 28 == 0)
+		//	{
+		//		printf("\n");
+		//	}
+		//
+		//	uint8_t pixel = (uint8_t)(MAT_AT(NN_INPUT(network), 0, i) * 255.f);
+		//
+		//	if (pixel)
+		//	{
+		//		printf("%3u", pixel);
+		//	}
+		//	else
+		//	{
+		//		printf("    ");
+		//	}
+		//}
+		//
+		//
+		//MAT_PRINT(NN_OUTPUT(network));
 	}
 }
 
