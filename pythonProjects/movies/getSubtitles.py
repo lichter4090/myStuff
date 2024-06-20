@@ -96,7 +96,6 @@ def main(movie_name):
     chrome_options.add_argument("--incognito")  # Open incognito window
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    driver.maximize_window()
     driver.get(URL)
 
     search_and_click(driver, movie_name)
