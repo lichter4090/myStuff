@@ -4,6 +4,10 @@ import getSubtitles
 
 def main():
     movie_name = window.main()
+    
+    if movie_name == "":
+        return
+        
     getSubtitles.main(movie_name)
 
 

@@ -8,7 +8,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from time import sleep
-from pyautogui import press
+from pyautogui import press, write
 
 
 URL = "https://www.ktuvit.me/"
@@ -67,7 +67,7 @@ def search_and_click(driver: webdriver.Chrome, movie_name: str):
     movie_options[0].click()
 
 
-def select_subtitles(driver: webdriver.Chrome):
+def select_subtitles(driver: webdriver.Chrome, movie: str):
     i = 1
     sub = (0, None)
 
@@ -86,6 +86,7 @@ def select_subtitles(driver: webdriver.Chrome):
     sub[1].click()
 
     sleep(1)
+    write(movie, interval=0.1)
     press('enter')
 
 
@@ -101,10 +102,10 @@ def main(movie_name):
     search_and_click(driver, movie_name)
     login(driver, "jonathan.lichtermiron@gmail.com", "4090dina")
     sleep(1)
-    select_subtitles(driver)
+    select_subtitles(driver, movie_name)
     sleep(1)
     driver.quit()
 
 
 if __name__ == "__main__":
-    main("פורסט גאמפ")
+    main("forrest gump")
