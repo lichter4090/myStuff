@@ -8,7 +8,9 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from time import sleep
-from pyautogui import press, write
+import helper
+from os import system
+from multiprocessing import Value
 
 
 URL = "https://www.ktuvit.me/"
@@ -53,6 +55,7 @@ def login(driver: webdriver.Chrome, username: str, password: str) -> None:
 
     email_field.send_keys(username)
     password_field.send_keys(password + Keys.ENTER)
+    sleep(1)
 
 
 def search_and_click(driver: webdriver.Chrome, movie_name: str):
@@ -67,7 +70,7 @@ def search_and_click(driver: webdriver.Chrome, movie_name: str):
     movie_options[0].click()
 
 
-def select_subtitles(driver: webdriver.Chrome, movie: str):
+def select_subtitles(driver: webdriver.Chrome):
     i = 1
     sub = (0, None)
 
@@ -84,26 +87,41 @@ def select_subtitles(driver: webdriver.Chrome, movie: str):
         i += 1
 
     sub[1].click()
-
-    sleep(1)
-    write(movie, interval=0.1)
-    press('enter')
+    sleep(2)
 
 
-def main(movie_name):
+def main(movie_name: str, progress: Value = Value()):
+    folder = helper.change_dir_to("Downloads")
+
     chrome_driver_path = ChromeDriverManager().install()
     chrome_options = Options()
     chrome_options.add_argument("--incognito")  # Open incognito window
+    chrome_options.add_argument("--headless")  # Run Chrome in headless mode
+    chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_experimental_option('prefs', {
+        'download.default_directory': folder,  # Specify your download directory
+        'download.prompt_for_download': False,  # Disable prompting for download
+        'download.directory_upgrade': True,
+        'safebrowsing.enabled': True
+    })
+
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get(URL)
 
+    progress.value += 1
     search_and_click(driver, movie_name)
+    progress.value += 1
     login(driver, "jonathan.lichtermiron@gmail.com", "4090dina")
-    sleep(1)
-    select_subtitles(driver, movie_name)
-    sleep(1)
+    progress.value += 1
+    select_subtitles(driver)
+    progress.value += 1
     driver.quit()
+
+    file = helper.get_file(folder, lambda f:  f.endswith(".srt"))
+    system(f'ren "{file}" "{movie_name}.srt"')
+    progress.value += 1
 
 
 if __name__ == "__main__":

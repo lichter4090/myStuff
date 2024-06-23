@@ -1,34 +1,16 @@
-from os import system, chdir, path, listdir
-from pathlib import Path
-import subprocess
-from time import sleep
-import psutil
+from os import system, path, listdir
+import helper
 
 
-def check_process(name):
-    for process in psutil.process_iter(['pid', 'name']):
-        if process.name() == name:
-            return True
-
-    return False
-
-
-def wait_until_process_finished(name):
-    while check_process(name):
-        sleep(1)
-
-
-def main(movie_name):
+def main(movie_name, with_subs=True):
     exe = "utweb.exe"
-    new_directory = Path.home() / 'Downloads'
-    chdir(new_directory)
-    directory = str(new_directory)
+    directory = helper.change_dir_to('Downloads')
 
     full_movie_name = directory + "\\" + movie_name
 
     cmd_line = f'{exe} "{full_movie_name}.torrent"'
 
-    subprocess.Popen(cmd_line, shell=True)
+    system(cmd_line)
 
     folder = ""
 
@@ -40,12 +22,12 @@ def main(movie_name):
                 folder = f
 
     system(f'MOVE "{full_movie_name}.torrent" "{folder}"')
-    system(f'MOVE "{full_movie_name}.srt" "{folder}"')
 
-    wait_until_process_finished(exe)
+    if with_subs:
+        system(f'MOVE "{full_movie_name}.srt" "{folder}"')
 
+    """
     chdir(folder)
-
     for filename in listdir():
         f = path.join(directory, filename)
 
@@ -57,6 +39,7 @@ def main(movie_name):
 
         if path.isfile(f) and movie_name not in f:
             system(f'delete "{f}"')
+    """
 
 
 if __name__ == "__main__":

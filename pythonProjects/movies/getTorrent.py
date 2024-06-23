@@ -7,7 +7,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from time import sleep
-from pyautogui import press, write
+import requests
+import helper
 
 
 URL = "https://yts.mx/"
@@ -62,6 +63,7 @@ def search_and_click(driver: webdriver.Chrome, movie_name: str):
             raise RuntimeError("Could not find movie")
 
     driver.get(new_url)
+    sleep(1)
 
 
 def select_torrent(driver: webdriver.Chrome, movie: str):
@@ -98,26 +100,31 @@ def select_torrent(driver: webdriver.Chrome, movie: str):
     if torrent is None:
         raise RuntimeError("Cannot find torrent")
 
-    driver.get(torrent.get_attribute("href"))
+    url_torrent = torrent.get_attribute("href")
+
+    r = requests.get(url_torrent, allow_redirects=True)
+
+    helper.change_dir_to('Downloads')
+    with open(f'{movie}.torrent', 'wb') as file:
+        file.write(r.content)
 
     sleep(1)
-
-    write(movie, interval=0.1)
-    press('enter')
 
 
 def main(movie_name):
     chrome_driver_path = ChromeDriverManager().install()
     chrome_options = Options()
     chrome_options.add_argument("--incognito")  # Open incognito window
+    chrome_options.add_argument("--headless")  # Run Chrome in headless mode
+    chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--disable-gpu")
+
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get(URL)
 
     search_and_click(driver, movie_name)
-    sleep(1)
     select_torrent(driver, movie_name)
-    sleep(1)
     driver.quit()
 
 
