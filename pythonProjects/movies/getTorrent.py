@@ -9,6 +9,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from time import sleep
 import requests
 import helper
+from multiprocessing import Value
 
 
 URL = "https://yts.mx/"
@@ -111,7 +112,7 @@ def select_torrent(driver: webdriver.Chrome, movie: str):
     sleep(1)
 
 
-def main(movie_name):
+def main(movie_name, progress: Value = Value('i', 0)):
     chrome_driver_path = ChromeDriverManager().install()
     chrome_options = Options()
     chrome_options.add_argument("--incognito")  # Open incognito window
@@ -122,11 +123,18 @@ def main(movie_name):
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get(URL)
+    progress.value += 1
 
     search_and_click(driver, movie_name)
+    progress.value += 1
+
     select_torrent(driver, movie_name)
+    progress.value += 1
+
     driver.quit()
+    progress.value += 1
 
 
 if __name__ == "__main__":
     main("forrest gump")
+

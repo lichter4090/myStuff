@@ -90,7 +90,7 @@ def select_subtitles(driver: webdriver.Chrome):
     sleep(2)
 
 
-def main(movie_name: str, progress: Value = Value()):
+def main(movie_name: str, progress: Value = Value('i', 0)):
     folder = helper.change_dir_to("Downloads")
 
     chrome_driver_path = ChromeDriverManager().install()
@@ -109,16 +109,18 @@ def main(movie_name: str, progress: Value = Value()):
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get(URL)
-
     progress.value += 1
+
     search_and_click(driver, movie_name)
     progress.value += 1
+
     login(driver, "jonathan.lichtermiron@gmail.com", "4090dina")
     progress.value += 1
+
     select_subtitles(driver)
     progress.value += 1
-    driver.quit()
 
+    driver.quit()
     file = helper.get_file(folder, lambda f:  f.endswith(".srt"))
     system(f'ren "{file}" "{movie_name}.srt"')
     progress.value += 1
