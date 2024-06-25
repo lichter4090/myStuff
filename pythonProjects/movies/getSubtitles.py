@@ -10,17 +10,16 @@ from selenium.webdriver.support import expected_conditions as ec
 from time import sleep
 import helper
 from os import system
-from multiprocessing import Value
 
 
 URL = "https://www.ktuvit.me/"
 WAIT = 5
 
 
-def get_element(driver: webdriver.Chrome, kind: By, search: str, clear: bool = False, multiple: bool = False) \
+def get_element(driver: webdriver.Chrome, kind: By, search: str, clear: bool = False, multiple: bool = False, wait=WAIT) \
         -> list[selenium.webdriver.remote.webelement.WebElement] | selenium.webdriver.remote.webelement.WebElement:
 
-    WebDriverWait(driver, WAIT).until(ec.presence_of_element_located((kind, search)))
+    WebDriverWait(driver, wait).until(ec.presence_of_element_located((kind, search)))
 
     if multiple:
         e = driver.find_elements(kind, search)
@@ -62,12 +61,19 @@ def search_and_click(driver: webdriver.Chrome, movie_name: str):
     search_tab = get_element(driver, By.ID, "tb_searchAssistance")
     search_tab.send_keys(movie_name)
 
-    movie_options = get_element(driver, By.CLASS_NAME, "ui-menu-item", multiple=True)
+    try:
+        movie_options = get_element(driver, By.CLASS_NAME, "ui-menu-item", multiple=True)
 
-    if len(movie_options) == 0:
-        return None
+        if len(movie_options) == 0:
+            helper.pop_msg("Error subtitles", "Could not find movie")
+            return False
 
-    movie_options[0].click()
+        movie_options[0].click()
+        return True
+
+    except Exception:
+        helper.pop_msg("Error subtitles", "Could not find movie")
+        return False
 
 
 def select_subtitles(driver: webdriver.Chrome):
@@ -86,11 +92,20 @@ def select_subtitles(driver: webdriver.Chrome):
 
         i += 1
 
+    try:
+        btn = get_element(driver, By.ID, "closePopup", wait=0.5)
+        btn.click()
+
+    except Exception:
+        pass
+
     sub[1].click()
     sleep(2)
 
 
-def main(movie_name: str, progress: Value = Value('i', 0)):
+def main(movie_name: str, progress=helper.Progress(6)):
+    progress.add_one()
+
     folder = helper.change_dir_to("Downloads")
 
     chrome_driver_path = ChromeDriverManager().install()
@@ -109,21 +124,36 @@ def main(movie_name: str, progress: Value = Value('i', 0)):
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get(URL)
-    progress.value += 1
+    progress.add_one()
 
-    search_and_click(driver, movie_name)
-    progress.value += 1
+    val = search_and_click(driver, movie_name)
+
+    if not val:
+        progress.set(0)
+        driver.quit()
+        return
+
+    progress.add_one()
 
     login(driver, "jonathan.lichtermiron@gmail.com", "4090dina")
-    progress.value += 1
+    progress.add_one()
 
     select_subtitles(driver)
-    progress.value += 1
+    progress.add_one()
 
     driver.quit()
     file = helper.get_file(folder, lambda f:  f.endswith(".srt"))
     system(f'ren "{file}" "{movie_name}.srt"')
-    progress.value += 1
+    progress.add_one()
+
+
+def call_main(movie_name: str, progress=helper.Progress(6)):
+    try:
+        main(movie_name, progress)
+
+    except Exception as e:
+        helper.pop_msg("Error subtitles", "Error happened in getSubtitles:\n" + str(e))
+        progress.set(0)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,16 @@
+import os.path
 from os import system, path, listdir
 import helper
 
 
-def main(movie_name, with_subs=True):
+def main(movie_name: str, with_subs: bool = True):
     exe = "utweb.exe"
     directory = helper.change_dir_to('Downloads')
 
     full_movie_name = directory + "\\" + movie_name
+
+    if not os.path.exists(full_movie_name):
+        return
 
     cmd_line = f'{exe} "{full_movie_name}.torrent"'
 
@@ -25,21 +29,6 @@ def main(movie_name, with_subs=True):
 
     if with_subs:
         system(f'MOVE "{full_movie_name}.srt" "{folder}"')
-
-    """
-    chdir(folder)
-    for filename in listdir():
-        f = path.join(directory, filename)
-
-        if path.isfile(f) and f.endswith(".mp4"):
-            system(f'ren "{f}" "{movie_name}.mp4"')
-
-    for filename in listdir():
-        f = path.join(directory, filename)
-
-        if path.isfile(f) and movie_name not in f:
-            system(f'delete "{f}"')
-    """
 
 
 if __name__ == "__main__":

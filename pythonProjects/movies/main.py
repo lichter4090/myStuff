@@ -2,43 +2,41 @@ import window
 import getSubtitles
 import getTorrent
 import downloadMovie
-import multiprocessing
+import threading
+from time import sleep
+import helper
 
 
 def main():
-    movie_name, subs, movie = window.main()
+    movie_name, subs, movie = window.choosing_window()
 
     if movie_name == "" or (not subs and not movie):
         return
 
+    progress_torrent = helper.Progress(4, -1)
+    progress_subs = helper.Progress(5, -1)
+
     subtitles = None
     torrent = None
 
-    progress_torrent = multiprocessing.Value('i', 0)
-    progress_subs = multiprocessing.Value('i', 0)
-
     if subs:
-        subtitles = multiprocessing.Process(target=getSubtitles.main, args=(movie_name, progress_subs,))
+        subtitles = threading.Thread(target=getSubtitles.call_main, args=(movie_name, progress_subs,), daemon=True)
         subtitles.start()
 
     if movie:
-        torrent = multiprocessing.Process(target=getTorrent.main, args=(movie_name, progress_torrent,))
+        torrent = threading.Thread(target=getTorrent.call_main, args=(movie_name, progress_torrent,), daemon=True)
         torrent.start()
 
-    if subs and movie:
-        while torrent.is_alive() and subtitles.is_alive():
-            pass  # monitor both
+    sleep(1)
+    window.monitoring_window(progress_torrent, progress_subs)
 
-    elif subs:
-        while subtitles.is_alive():
-            pass  # monitor only subs
+    if subtitles is not None:
+        subtitles.join()
 
-    else:
-        while torrent.is_alive():
-            pass  # monitor torrent only
+    if torrent is not None:
+        torrent.join()
 
-    #  if movie:
-    #    downloadMovie.main(movie_name, subs)
+        downloadMovie.main(movie_name, subs)
 
 
 if __name__ == "__main__":

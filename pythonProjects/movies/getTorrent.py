@@ -9,7 +9,6 @@ from selenium.webdriver.support import expected_conditions as ec
 from time import sleep
 import requests
 import helper
-from multiprocessing import Value
 
 
 URL = "https://yts.mx/"
@@ -61,10 +60,13 @@ def search_and_click(driver: webdriver.Chrome, movie_name: str):
             new_url = movie.get_attribute("href")
 
         except Exception:
-            raise RuntimeError("Could not find movie")
+            helper.pop_msg("Error torrent", "Could not find movie")
+            return False
 
     driver.get(new_url)
     sleep(1)
+
+    return True
 
 
 def select_torrent(driver: webdriver.Chrome, movie: str):
@@ -112,7 +114,9 @@ def select_torrent(driver: webdriver.Chrome, movie: str):
     sleep(1)
 
 
-def main(movie_name, progress: Value = Value('i', 0)):
+def main(movie_name, progress=helper.Progress(5)):
+    progress.add_one()
+
     chrome_driver_path = ChromeDriverManager().install()
     chrome_options = Options()
     chrome_options.add_argument("--incognito")  # Open incognito window
@@ -123,18 +127,32 @@ def main(movie_name, progress: Value = Value('i', 0)):
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get(URL)
-    progress.value += 1
+    progress.add_one()
 
-    search_and_click(driver, movie_name)
-    progress.value += 1
+    val = search_and_click(driver, movie_name)
+
+    if not val:
+        progress.set(0)
+        driver.quit()
+        return
+
+    progress.add_one()
 
     select_torrent(driver, movie_name)
-    progress.value += 1
+    progress.add_one()
 
     driver.quit()
-    progress.value += 1
+    progress.add_one()
+
+
+def call_main(movie_name: str, progress=helper.Progress(6)):
+    try:
+        main(movie_name, progress)
+
+    except Exception as e:
+        helper.pop_msg("Error torrent", "Error happened in getTorrent:\n" + str(e))
+        progress.set(0)
 
 
 if __name__ == "__main__":
     main("forrest gump")
-
