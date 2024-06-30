@@ -83,7 +83,7 @@ void nnFree(nn* network);//frees the dynamiclly allocated data of a network
 #ifdef NN_IMPL
 
 bool USE_SIG = false;
-bool USE_RELU = true;
+bool USE_RELU = false;
 
 
 void useSig()
@@ -95,6 +95,7 @@ void useSig()
 	}
 
 	USE_SIG = true;
+	USE_RELU = false;
 }
 
 void useRelu()
@@ -106,6 +107,7 @@ void useRelu()
 	}
 
 	USE_RELU = true;
+	USE_SIG = false;
 }
 
 
@@ -860,7 +862,7 @@ nnImage nnImageAlloc(int w, int h, Color color, float scale)
 
 #ifdef NN_ENABLE_GYM
 
-size_t GRAPH_SIZE = 40000;
+size_t GRAPH_SIZE = 5000;
 
 #define STR_LEN 256
 
@@ -990,7 +992,8 @@ void nnRenderRaylib(nn* network, int padx, int pady, int w, int h)
 
 					value = sigmoidf(MAT_AT(network->ws[l], j, i));
 					value -= 0.5;
-					value *= 2;
+					value = fabs(value * 2); // value is between 0 and 1 where 0 will be 0
+
 					high_color.a = (unsigned char)floorf(255.f * value);
 					Vector2 start = { (float)cx1, (float)cy1 };
 					Vector2 end = { (float)cx2, (float)cy2 };
@@ -1007,7 +1010,8 @@ void nnRenderRaylib(nn* network, int padx, int pady, int w, int h)
 			default:
 				value = sigmoidf(MAT_AT(network->bs[l - 1], 0, i));
 				value -= 0.5;
-				value *= 2;
+				value = fabs(value * 2);
+
 				high_color.a = (unsigned char)floorf(255.f * value);
 				DrawCircle(cx1, cy1, NEURON_RADIOS, ColorAlphaBlend(low_color, high_color, WHITE));
 			}

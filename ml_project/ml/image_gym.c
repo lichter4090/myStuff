@@ -52,6 +52,8 @@ int main(int argc, char** argv)
 	nn* gradient = nnAlloc(arch, arch_size);
 	nnRand(network, -1, 1);
 
+	useSig();
+
 	FILE* in = fopen(data_file_path, "rb");
 
 	if (!in)
@@ -81,7 +83,7 @@ int main(int argc, char** argv)
 	createWindow(WIDTH, HEIGHT, FPS);
 
 	size_t i = 0;
-	float rate = 1;
+	float rate = 5;
 
 	plot* cost_plot = plotAlloc();
 

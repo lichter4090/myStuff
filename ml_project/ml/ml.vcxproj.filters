@@ -32,12 +32,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="data\img_reco.arch">
-      <Filter>Source Files</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="num_recognition.c">
+    <ClCompile Include="image_gym.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

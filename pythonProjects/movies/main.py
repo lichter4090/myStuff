@@ -1,7 +1,6 @@
 import window
 import getSubtitles
 import getTorrent
-import downloadMovie
 import threading
 from time import sleep
 import helper
@@ -36,7 +35,7 @@ def main():
     if torrent is not None:
         torrent.join()
 
-        downloadMovie.main(movie_name, subs)
+    helper.pop_msg("Done", "Finished downloading")
 
 
 if __name__ == "__main__":
