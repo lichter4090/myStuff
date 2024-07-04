@@ -132,7 +132,7 @@ def main(movie_name, progress=helper.Progress(5)):
     val = search_and_click(driver, movie_name)
 
     if not val:
-        progress.set(0)
+        progress.set_end()
         driver.quit()
         return
 
@@ -150,8 +150,8 @@ def call_main(movie_name: str, progress=helper.Progress(6)):
         main(movie_name, progress)
 
     except Exception as e:
-        helper.pop_msg("Error torrent", "Error happened in getTorrent:\n" + str(e))
-        progress.set(0)
+        helper.pop_msg("Error torrent", "Unexpected error happened while downloading torrent")
+        progress.set_end()
 
 
 if __name__ == "__main__":

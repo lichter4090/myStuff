@@ -1,6 +1,5 @@
 import threading
 import tkinter as tk
-from multiprocessing import Value
 from tkinter import ttk
 from time import sleep
 import helper
@@ -76,40 +75,28 @@ def choosing_window():
     return movie_name, not subs.get(), not movie.get()
 
 
-def start_progress(window: tk.Tk, pb_movie: ttk.Progressbar, pb_subs: ttk.Progressbar, value_movie: helper.Progress, value_subs: helper.Progress):
-    pb_subs['value'] = 0
-    pb_movie['value'] = 0
-
+def start_progress(window: tk.Tk, monitor_torrent: helper.MonitorProcess, monitor_subs: helper.MonitorProcess):
     window.update_idletasks()
 
-    to_stop = False
-    download_subs = value_subs.get_raw() != -1
-    download_movie = value_movie.get_raw() != -1
-    subs_finished = not download_subs
-    movie_finished = not download_movie
+    subs_finished = False
+    movie_finished = False
 
-    while not to_stop:
-        if download_movie:
-            pb_movie['value'] = value_movie.get()
-            movie_finished = value_movie.done()
-
-        if download_subs:
-            pb_subs['value'] = value_subs.get()
-            subs_finished = value_subs.done()
+    while not (subs_finished and movie_finished):
+        subs_finished = monitor_subs.update()
+        movie_finished = monitor_torrent.update()
 
         window.update_idletasks()
 
-        to_stop = movie_finished and subs_finished
-
         sleep(0.05)
 
+    helper.pop_msg("Done", "Finished downloading")
     window.destroy()
 
 
 def monitoring_window(progress_torrent=helper.Progress(1, -1), progress_subs=helper.Progress(1, -1)):
     ##  window  ##
     window = tk.Tk()
-    window.title("Downloading...")
+    window.title("Downloading")
     window.resizable(False, False)
     window.configure(background=BC)
 
@@ -120,21 +107,25 @@ def monitoring_window(progress_torrent=helper.Progress(1, -1), progress_subs=hel
     movie_frame = tk.Frame()
     movie_frame.configure(background=BC)
 
-    movie_lbl = tk.Label(movie_frame, text="Movie Progress", font=BTN_FONT, bg=BC)
+    movie_lbl = tk.Label(movie_frame, text="Movie Progress", font=TITLE_FONT, bg=BC)
     pb_movie = ttk.Progressbar(movie_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
+    txt_torrent_monitor = tk.Label(movie_frame, text="", font=BTN_FONT, bg=BC)
 
     movie_lbl.pack()
     pb_movie.pack()
+    txt_torrent_monitor.pack()
 
     ##  subtitles frame  ##
     subs_frame = tk.Frame()
     subs_frame.configure(background=BC)
 
-    subs_lbl = tk.Label(subs_frame, text="Subtitles Progress", font=BTN_FONT, bg=BC)
+    subs_lbl = tk.Label(subs_frame, text="Subtitles Progress", font=TITLE_FONT, bg=BC)
     pb_subs = ttk.Progressbar(subs_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
+    txt_subs_monitor = tk.Label(subs_frame, text="", font=BTN_FONT, bg=BC)
 
     subs_lbl.pack()
     pb_subs.pack()
+    txt_subs_monitor.pack()
 
     ## place frames ##
     title.pack(pady=PAD_WIDGET, padx=PAD_WIDGET)
@@ -145,8 +136,11 @@ def monitoring_window(progress_torrent=helper.Progress(1, -1), progress_subs=hel
     if progress_torrent.get_raw() != -1:
         movie_frame.pack(pady=PAD_WIDGET, padx=PAD_WIDGET)
 
+    monitor_torrent = helper.MonitorProcess(pb_movie, progress_torrent, txt_torrent_monitor, helper.TORRENT_STEPS)
+    monitor_subs = helper.MonitorProcess(pb_subs, progress_subs, txt_subs_monitor, helper.SUBS_STEPS)
+
     ##  monitor thread  ##
-    monitor = threading.Thread(target=start_progress, args=(window, pb_movie, pb_subs, progress_torrent, progress_subs),
+    monitor = threading.Thread(target=start_progress, args=(window, monitor_torrent, monitor_subs),
                                daemon=True)
     monitor.start()
 

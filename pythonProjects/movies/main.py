@@ -35,8 +35,6 @@ def main():
     if torrent is not None:
         torrent.join()
 
-    helper.pop_msg("Done", "Finished downloading")
-
 
 if __name__ == "__main__":
     main()
