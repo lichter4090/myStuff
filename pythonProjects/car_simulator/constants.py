@@ -20,8 +20,9 @@ ROAD_HEIGHT = HEIGHT
 ROAD_MIDDLE = WIDTH // 2 - ROAD_WIDTH // 2
 
 MAX_ACC = 2
-FRICTION = 1
-MAX_SPEED = 150
+FRICTION = 0.5
+GEAR_FRICTION = 0
+MAX_SPEED = 300
 
 GREY = 75, 75, 75
 BLACK = 0, 0, 0
@@ -29,7 +30,11 @@ BLACK = 0, 0, 0
 SETTINGS_SIZE = 40
 SETTINGS_COORDINATES = 5
 
-SPEEDOMETER_SIZE = 50
+SPEEDOMETER_SIZE = 100
+
+
+NEUTRAL_GEAR = 0
+ROTATION = 4
 
 
 def extract_files_from_folder(folder_name, key_name, w, h, key_word_for_opposite="aaaaaaaaa"):
@@ -47,3 +52,10 @@ def extract_files_from_folder(folder_name, key_name, w, h, key_word_for_opposite
             files[filename.split("_")[0]] = scaled_image
 
     return files
+
+
+def draw_text(window, text, center_coordinates, font, color):
+    label = font.render(text, True, color)
+    text_rect = label.get_rect()
+    text_rect.center = center_coordinates
+    window.blit(label, text_rect)

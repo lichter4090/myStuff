@@ -1,6 +1,7 @@
 import selenium.webdriver.remote.webelement
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import OperationSystemManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -9,6 +10,14 @@ from selenium.webdriver.support import expected_conditions as ec
 from time import sleep
 import requests
 import helper
+
+
+class ChromeDriverManager64(ChromeDriverManager):
+    def __init__(self):
+        super().__init__(os_system_manager="win64")
+
+    def get_os_type(self):
+        return "win64"
 
 
 URL = "https://yts.mx/"
@@ -117,7 +126,8 @@ def select_torrent(driver: webdriver.Chrome, movie: str):
 def main(movie_name, progress=helper.Progress(5)):
     progress.add_one()
 
-    chrome_driver_path = ChromeDriverManager().install()
+    chrome_driver_path = ChromeDriverManager(os_system_manager=OperationSystemManager("win32")).install()
+
     chrome_options = Options()
     chrome_options.add_argument("--incognito")  # Open incognito window
     chrome_options.add_argument("--headless")  # Run Chrome in headless mode
@@ -150,7 +160,7 @@ def call_main(movie_name: str, progress=helper.Progress(6)):
         main(movie_name, progress)
 
     except Exception as e:
-        helper.pop_msg("Error torrent", "Unexpected error happened while downloading torrent")
+        helper.pop_msg("Error torrent", f"Unexpected error happened while downloading torrent")
         progress.set_end()
 
 

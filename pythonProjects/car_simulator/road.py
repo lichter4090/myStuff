@@ -1,17 +1,15 @@
 from constants import *
 import math
 from random import choice
+from car import Car
 
 
 ROAD_OPTIONS = extract_files_from_folder("Assets", "road", ROAD_WIDTH, ROAD_HEIGHT, key_word_for_opposite="horizontal")
 
 
 class Road(pygame.Rect):
-    def __init__(self, x, y, w=ROAD_WIDTH, h=ROAD_HEIGHT, acc=0, v=0, friction=0, left_turn=None):
+    def __init__(self, x, y, w=ROAD_WIDTH, h=ROAD_HEIGHT, left_turn=None):
         super().__init__(x, y, w, h)
-        self.acc = acc
-        self.friction = friction
-        self.v = v
         self.vertical = h > w
         self.left_turn = None
 
@@ -21,45 +19,15 @@ class Road(pygame.Rect):
     def get_coordinates(self):
         return self.x, self.y
 
-    def move_road(self, key_pressed, car_angle):
-        if key_pressed[pygame.K_UP]:
-            self.acc = MAX_ACC
-
-        elif key_pressed[pygame.K_DOWN]:
-            self.acc = -MAX_ACC
-
-        else:
-            self.acc = 0
-
-        if self.v > 0:
-            self.friction = -FRICTION
-
-        elif self.v < 0:
-            self.friction = FRICTION
-
-        else:
-            self.friction = 0
-
-        self.v += self.acc
-        self.v += self.friction
-
-        if self.v > MAX_SPEED:
-            self.v = MAX_SPEED
-
-        elif self.v < -MAX_SPEED:
-            self.v = -MAX_SPEED
-
-        self.y += (self.v / 10) * math.cos(math.radians(car_angle))
-        self.x += (self.v / 10) * math.sin(math.radians(car_angle))
-
 
 class Track:
-    def __init__(self):
+    def __init__(self, car):
         self.roads = [Road(ROAD_MIDDLE, 0)]
         self.last_road = self.roads[-1]
+        self.car = car
 
     def get_v(self):
-        return self.roads[0].v
+        return self.car.get_v()
 
     def update_last(self):
         self.last_road = self.roads[-1]
@@ -96,34 +64,37 @@ class Track:
         options = list()
 
         if self.last_road.vertical:
-            options.append(Road(self.last_road.x, self.last_road.y - ROAD_HEIGHT, acc=self.last_road.acc, v=self.last_road.v, friction=self.last_road.friction))  # straight
-            options.append(Road(self.last_road.x + ROAD_WIDTH - ROAD_HEIGHT, self.last_road.y - ROAD_WIDTH, w=ROAD_HEIGHT, h=ROAD_WIDTH, acc=self.last_road.acc, v=self.last_road.v, friction=self.last_road.friction, left_turn=True))  # left turn
-            options.append(Road(self.last_road.x, self.last_road.y - ROAD_WIDTH, w=ROAD_HEIGHT, h=ROAD_WIDTH, acc=self.last_road.acc, v=self.last_road.v, friction=self.last_road.friction, left_turn=False))  # right turn
+            options.append(Road(self.last_road.x, self.last_road.y - ROAD_HEIGHT))  # straight
+            options.append(Road(self.last_road.x + ROAD_WIDTH - ROAD_HEIGHT, self.last_road.y - ROAD_WIDTH, w=ROAD_HEIGHT, h=ROAD_WIDTH, left_turn=True))  # left turn
+            options.append(Road(self.last_road.x, self.last_road.y - ROAD_WIDTH, w=ROAD_HEIGHT, h=ROAD_WIDTH, left_turn=False))  # right turn
 
         else:
             if self.last_road.left_turn:  # last one was a left turn
-                options.append(Road(self.last_road.x, self.last_road.y + self.last_road.height - ROAD_HEIGHT, acc=self.last_road.acc, v=self.last_road.v, friction=self.last_road.friction))  # up
-                options.append(Road(self.last_road.x - self.last_road.width, self.last_road.y, w=ROAD_HEIGHT, h=ROAD_WIDTH, acc=self.last_road.acc, v=self.last_road.v, friction=self.last_road.friction, left_turn=True))  # straight
+                options.append(Road(self.last_road.x, self.last_road.y + self.last_road.height - ROAD_HEIGHT))  # up
+                options.append(Road(self.last_road.x - self.last_road.width, self.last_road.y, w=ROAD_HEIGHT, h=ROAD_WIDTH, left_turn=True))  # straight
 
             else:  # last one was a right turn
-                options.append(Road(self.last_road.x + self.last_road.width - self.last_road.height, self.last_road.y + self.last_road.height - ROAD_HEIGHT, acc=self.last_road.acc, v=self.last_road.v, friction=self.last_road.friction))  # up
-                options.append(Road(self.last_road.x + self.last_road.width, self.last_road.y, w=ROAD_HEIGHT, h=ROAD_WIDTH, acc=self.last_road.acc, v=self.last_road.v, friction=self.last_road.friction, left_turn=False))  # straight
+                options.append(Road(self.last_road.x + self.last_road.width - self.last_road.height, self.last_road.y + self.last_road.height - ROAD_HEIGHT))  # up
+                options.append(Road(self.last_road.x + self.last_road.width, self.last_road.y, w=ROAD_HEIGHT, h=ROAD_WIDTH, left_turn=False))  # straight
 
         return choice(options)
 
     def is_track_moving(self):
-        return self.get_v() != 0
+        return self.car.get_v() != 0
 
-    def can_move_track(self, car):
+    def can_move_track(self):
         for road in self.roads:
-            if road.colliderect(car):
+            if road.colliderect(self.car):
                 return True
 
         return False
 
-    def move_track(self, key_pressed, car_angle):
+    def move_track(self, key_pressed):
+        change_x, change_y = self.car.move_car(key_pressed)
+
         for idx, road in enumerate(self.roads):
-            road.move_road(key_pressed, car_angle)
+            road.x += change_x
+            road.y += change_y
 
             if road.y > HEIGHT:
                 self.roads.remove(road)

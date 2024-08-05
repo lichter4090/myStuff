@@ -1,6 +1,7 @@
 import selenium.webdriver.remote.webelement
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import OperationSystemManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -108,7 +109,7 @@ def main(movie_name: str, progress=helper.Progress(6)):
 
     folder = helper.change_dir_to("Downloads")
 
-    chrome_driver_path = ChromeDriverManager().install()
+    chrome_driver_path = ChromeDriverManager(os_system_manager=OperationSystemManager("win32")).install()
     chrome_options = Options()
     chrome_options.add_argument("--incognito")  # Open incognito window
     chrome_options.add_argument("--headless")  # Run Chrome in headless mode

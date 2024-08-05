@@ -11,13 +11,8 @@ SETTINGS_OPTIONS = extract_files_from_folder("Assets", "settings", SETTINGS_SIZE
 HOVERING_SETTINGS_BUTTON = False
 
 SPEEDOMETER = pygame.Rect(SETTINGS_COORDINATES * 3, HEIGHT - SPEEDOMETER_SIZE - SETTINGS_COORDINATES, SPEEDOMETER_SIZE, SPEEDOMETER_SIZE)
-
-
-def draw_text(window, text, center_coordinates, font, color):
-    label = font.render(text, True, color)
-    text_rect = label.get_rect()
-    text_rect.center = center_coordinates
-    window.blit(label, text_rect)
+RPM_METER = pygame.Rect(WIDTH - SETTINGS_COORDINATES * 30, HEIGHT - SPEEDOMETER_SIZE - SETTINGS_COORDINATES, SPEEDOMETER_SIZE, SPEEDOMETER_SIZE)
+GEAR_METER = pygame.Rect(WIDTH - SETTINGS_COORDINATES * 30, HEIGHT - SPEEDOMETER_SIZE * 2 - SETTINGS_COORDINATES, SPEEDOMETER_SIZE, SPEEDOMETER_SIZE)
 
 
 def draw_window(window, car, track):
@@ -34,6 +29,8 @@ def draw_window(window, car, track):
     pygame.draw.rect(window, BLACK, SETTINGS_RECT, width=1)
 
     draw_text(window, f"{abs(int(track.get_v() * (1 / 3)))}", SPEEDOMETER.center, big_font, BLACK)
+    draw_text(window, f"{car.get_rpm()}", RPM_METER.center, big_font, BLACK)
+    draw_text(window, f"{car.get_gear()}  |  {car.get_mode()}", GEAR_METER.center, big_font, BLACK)
 
     pygame.display.update()
 
@@ -42,7 +39,7 @@ def main():
     global HOVERING_SETTINGS_BUTTON
     window = pygame.display.set_mode((WIDTH, HEIGHT))
     car = Car(CAR_MIDDLE, HEIGHT - CAR_HEIGHT - 10)
-    track = Track()
+    track = Track(car)
 
     clock = pygame.time.Clock()
     to_exit = False
@@ -67,15 +64,15 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     car = Car(CAR_MIDDLE, HEIGHT - CAR_HEIGHT - 10, color=car.get_color())
-                    track = Track()
+                    track = Track(car)
+
+                if event.key in (pygame.K_d, pygame.K_p, pygame.K_r, pygame.K_n):
+                    car.set_mode(chr(event.key))
 
         key_pressed = pygame.key.get_pressed()
 
-        if track.can_move_track(car):
-            track.move_track(key_pressed, car.get_angle())
-
-        if track.is_track_moving():
-            car.move_car(key_pressed)
+        if track.can_move_track():
+            track.move_track(key_pressed)
 
         draw_window(window, car, track)
 
