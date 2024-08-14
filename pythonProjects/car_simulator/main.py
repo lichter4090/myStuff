@@ -1,18 +1,31 @@
-from car import Car, CAR_OPTIONS
+from car import AutoCar, ManualCar, CAR_OPTIONS
 from road import Track
 from constants import *
 import settings_window
 
-pygame.init()
-pygame.font.init()
 
-SETTINGS_RECT = pygame.Rect(SETTINGS_COORDINATES, SETTINGS_COORDINATES, SETTINGS_SIZE, SETTINGS_SIZE)
-SETTINGS_OPTIONS = extract_files_from_folder("Assets", "settings", SETTINGS_SIZE, SETTINGS_SIZE)
 HOVERING_SETTINGS_BUTTON = False
+HOVERING_INFO_BUTTON = False
+MANUAL = True
 
-SPEEDOMETER = pygame.Rect(SETTINGS_COORDINATES * 3, HEIGHT - SPEEDOMETER_SIZE - SETTINGS_COORDINATES, SPEEDOMETER_SIZE, SPEEDOMETER_SIZE)
-RPM_METER = pygame.Rect(WIDTH - SETTINGS_COORDINATES * 30, HEIGHT - SPEEDOMETER_SIZE - SETTINGS_COORDINATES, SPEEDOMETER_SIZE, SPEEDOMETER_SIZE)
-GEAR_METER = pygame.Rect(WIDTH - SETTINGS_COORDINATES * 30, HEIGHT - SPEEDOMETER_SIZE * 2 - SETTINGS_COORDINATES, SPEEDOMETER_SIZE, SPEEDOMETER_SIZE)
+
+def restart_car(old_car=None):
+    color = "cyan"
+
+    if old_car:
+        old_car.stop_engine()
+        color = old_car.get_color()
+        del old_car
+
+    if MANUAL:
+        car = ManualCar(CAR_MIDDLE, HEIGHT - CAR_HEIGHT - 10, color=color)
+
+    else:
+        car = AutoCar(CAR_MIDDLE, HEIGHT - CAR_HEIGHT - 10, color=color)
+
+    track = Track(car)
+
+    return car, track
 
 
 def draw_window(window, car, track):
@@ -26,23 +39,37 @@ def draw_window(window, car, track):
     else:
         window.blit(SETTINGS_OPTIONS["no-hover"], (SETTINGS_COORDINATES, SETTINGS_COORDINATES))
 
+    if HOVERING_INFO_BUTTON:
+        pygame.draw.rect(window, LIGHT_GRAY, INFO_RECT)
+
+    pygame.draw.rect(window, BLACK, INFO_RECT, width=1)
+
+    text_rect = INFO_TEXT.get_rect()
+    text_rect.center = INFO_RECT.center
+    window.blit(INFO_TEXT, text_rect)
+
     pygame.draw.rect(window, BLACK, SETTINGS_RECT, width=1)
 
-    draw_text(window, f"{abs(int(track.get_v() * (1 / 3)))}", SPEEDOMETER.center, big_font, BLACK)
+    draw_text(window, f"{abs(track.get_v())}", SPEEDOMETER.center, big_font, BLACK)
     draw_text(window, f"{car.get_rpm()}", RPM_METER.center, big_font, BLACK)
-    draw_text(window, f"{car.get_gear()}  |  {car.get_mode()}", GEAR_METER.center, big_font, BLACK)
+    draw_text(window, car.text(), GEAR_METER.center, big_font, BLACK)
+
+    if MANUAL:
+        draw_text(window, "M", MANUAL_INDICATOR.center, little_font, RED)
 
     pygame.display.update()
 
 
 def main():
-    global HOVERING_SETTINGS_BUTTON
+    global HOVERING_SETTINGS_BUTTON, HOVERING_INFO_BUTTON, MANUAL
+
     window = pygame.display.set_mode((WIDTH, HEIGHT))
-    car = Car(CAR_MIDDLE, HEIGHT - CAR_HEIGHT - 10)
-    track = Track(car)
+
+    car, track = restart_car()
 
     clock = pygame.time.Clock()
     to_exit = False
+    restart = False
 
     while not to_exit:
         clock.tick(FPS)
@@ -52,27 +79,46 @@ def main():
             if event.type == pygame.QUIT:
                 to_exit = True
 
-            if SETTINGS_RECT.collidepoint(mouse_x, mouse_y):
-                HOVERING_SETTINGS_BUTTON = True
-            else:
-                HOVERING_SETTINGS_BUTTON = False
+            HOVERING_SETTINGS_BUTTON = SETTINGS_RECT.collidepoint(mouse_x, mouse_y)
+            HOVERING_INFO_BUTTON = INFO_RECT.collidepoint(mouse_x, mouse_y)
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if SETTINGS_RECT.collidepoint(mouse_x, mouse_y):
-                    car.set_image(settings_window.main(list(CAR_OPTIONS.keys()), car.get_color()))
+                    color, manual = settings_window.main(list(CAR_OPTIONS.keys()), car.get_color(), MANUAL)
+
+                    car.set_image(color)
+
+                    if manual != MANUAL:
+                        MANUAL = manual
+                        restart = True
+
+                if INFO_RECT.collidepoint(mouse_x, mouse_y):
+                    info()
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    car = Car(CAR_MIDDLE, HEIGHT - CAR_HEIGHT - 10, color=car.get_color())
-                    track = Track(car)
+                    restart = True
 
-                if event.key in (pygame.K_d, pygame.K_p, pygame.K_r, pygame.K_n):
-                    car.set_mode(chr(event.key))
+                if event.key == pygame.K_p:
+                    car.switch_hand_break()
+
+        if restart:
+            car, track = restart_car(car)
+            restart = False
+
+            continue
 
         key_pressed = pygame.key.get_pressed()
 
+        try:
+            change_x, change_y = car.move_car(key_pressed)
+        except Exception as e:
+            pop_msg("Engine failure", str(e))
+            restart = True
+            continue
+
         if track.can_move_track():
-            track.move_track(key_pressed)
+            track.move_track(change_x, change_y)
 
         draw_window(window, car, track)
 
