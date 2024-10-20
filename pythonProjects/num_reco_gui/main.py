@@ -18,6 +18,7 @@ HEIGHT = PIXEL_SIZE * PIC_SIZE + FONT_SIZE * 2
 WIDTH = PIXEL_SIZE * PIC_SIZE
 
 little_font = pygame.font.Font('freesansbold.ttf', FONT_SIZE)
+big_font = pygame.font.Font('freesansbold.ttf', FONT_SIZE * 2)
 
 
 def draw_text(window: pygame.Surface, text: str, center_coordinates: tuple[int, int], font: pygame.font.Font, color: tuple[int, int, int]):
@@ -45,9 +46,14 @@ def draw(window: pygame.Surface, pixels: PixelMat, model: Model):
     pygame.display.update()
 
 
-def main(model_file_name: str):
-    model = Model(model_file_name)
+def draw_loading(window: pygame.Surface):
+    window.fill(WHITE)
 
+    draw_text(window, "Model Is Loading", (WIDTH // 2, HEIGHT // 2), big_font, BLACK)
+    pygame.display.update()
+
+
+def main(model_file_name: str):
     pixels = PixelMat(PIXEL_SIZE, PIC_SIZE)
 
     window = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -56,8 +62,14 @@ def main(model_file_name: str):
 
     to_run = True
 
+    model = Model(model_file_name)
+
     while to_run:
         clock.tick(FPS)
+
+        if model.still_loading():
+            draw_loading(window)
+            continue
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
