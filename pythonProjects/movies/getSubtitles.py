@@ -1,49 +1,9 @@
-import selenium.webdriver.remote.webelement
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.core.os_manager import OperationSystemManager
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
-from time import sleep
-import helper
-from os import system
+from ultralytics import download
+
+from helper import *
 
 
 URL = "https://www.ktuvit.me/"
-WAIT = 5
-
-
-def get_element(driver: webdriver.Chrome, kind: By, search: str, clear: bool = False, multiple: bool = False, wait=WAIT) \
-        -> list[selenium.webdriver.remote.webelement.WebElement] | selenium.webdriver.remote.webelement.WebElement:
-
-    WebDriverWait(driver, wait).until(ec.presence_of_element_located((kind, search)))
-
-    if multiple:
-        e = driver.find_elements(kind, search)
-    else:
-        e = driver.find_element(kind, search)
-
-    if clear:
-        e.clear()
-
-    return e
-
-
-def get_element_if_contains(driver: webdriver.Chrome, kind: By, search: str, contain: str,
-                            func=lambda a, b: a.text == b) -> selenium.webdriver.remote.webelement.WebElement | None:
-    elements = get_element(driver, kind, search, False, True)
-    element = None
-
-    for elem in elements:
-        if func(elem, contain):
-            element = elem
-            break
-
-    return element
 
 
 def login(driver: webdriver.Chrome, username: str, password: str) -> None:
@@ -66,30 +26,32 @@ def search_and_click(driver: webdriver.Chrome, movie_name: str):
         movie_options = get_element(driver, By.CLASS_NAME, "ui-menu-item", multiple=True)
 
         if len(movie_options) == 0:
-            helper.pop_msg("Error subtitles", "Could not find movie")
+            pop_msg("Error subtitles", "Could not find movie")
             return False
 
         movie_options[0].click()
         return True
 
     except Exception:
-        helper.pop_msg("Error subtitles", "Could not find movie")
+        pop_msg("Error subtitles", "Could not find movie")
         return False
 
 
 def select_subtitles(driver: webdriver.Chrome):
     i = 1
-    sub = (0, None)
+    sub = ("", 0)
 
     while True:
         try:
             downloads = int(get_element(driver, By.XPATH, f"""//*[@id="subtitlesList"]/tbody/tr[{i}]/td[5]""").text)
-            download_link = get_element(driver, By.XPATH, f"""//*[@id="subtitlesList"]/tbody/tr[{i}]/td[6]/a[2]""")
+            subs_element = get_element(driver, By.XPATH, f"""//*[@id="subtitlesList"]/tbody/tr[{i}]/td[6]/a[2]""")
+            subs_id = subs_element.get_attribute("data-subtitle-id")
+
         except Exception:
             break
 
-        if sub[0] < downloads:
-            sub = downloads, download_link
+        if sub[1] < downloads:
+            sub = subs_id, downloads
 
         i += 1
 
@@ -100,14 +62,70 @@ def select_subtitles(driver: webdriver.Chrome):
     except Exception:
         pass
 
-    sub[1].click()
-    sleep(2)
+    return sub[0]
 
 
-def main(movie_name: str, progress=helper.Progress(6)):
+def download_subtitles(base_url: str, film_id: str, subtitle_id: str, output_path: str, font_size=0, font_color="", predefined_layout=-1) -> dict | None:
+    # Construct the full URL
+    url = f"{base_url}/Services/ContentProvider.svc/RequestSubtitleDownload"
+
+    # Create the payload
+    data = {
+        "request": {
+            "FilmID": film_id,
+            "SubtitleID": subtitle_id,
+            "FontSize": font_size,
+            "FontColor": font_color,
+            "PredefinedLayout": predefined_layout
+        }
+    }
+
+    # Set headers
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    # Send the POST request
+    try:
+        response = requests.post(url, json=data, headers=headers)
+
+    except Exception as e:
+        pop_msg("Error subtitles", "Error while getting download ID\n" + e)
+        return False
+
+    if response:
+        d = json.loads(response.json()["d"])  # d is the dictionary with data about the subtitles downloads info
+
+    else:
+        return False
+
+    valid_in = d["ValidIn"]
+    download_id = d["DownloadIdentifier"]  # download id of the subtitles
+
+    if valid_in > 0:
+        print(f"Waiting {valid_in} seconds before downloading...")
+        time.sleep(valid_in)
+
+    download_url = f"{base_url}/Services/DownloadFile.ashx?DownloadIdentifier={download_id}"
+
+    sleep(0.2)
+    try:
+        response = requests.get(download_url, stream=True)
+
+        # Save the file to the specified output path
+        with open(output_path, "wb") as file:
+            for chunk in response.iter_content(chunk_size=8192):  # Stream the file in chunks
+                file.write(chunk)
+
+        return True
+
+    except Exception as e:
+        pop_msg("Error subtitles", "Error while downloading subtitles\n" + e)
+        return False
+
+
+def main(movie_name: str, progress=Progress(6)):
     progress.add_one()
-
-    folder = helper.change_dir_to("Downloads")
 
     chrome_driver_path = ChromeDriverManager(os_system_manager=OperationSystemManager("win32")).install()
     chrome_options = Options()
@@ -116,7 +134,7 @@ def main(movie_name: str, progress=helper.Progress(6)):
     chrome_options.add_argument("--window-size=1920x1080")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_experimental_option('prefs', {
-        'download.default_directory': folder,  # Specify your download directory
+        'download.default_directory': DOWNLOADS_PATH,  # Specify your download directory
         'download.prompt_for_download': False,  # Disable prompting for download
         'download.directory_upgrade': True,
         'safebrowsing.enabled': True
@@ -134,27 +152,31 @@ def main(movie_name: str, progress=helper.Progress(6)):
         driver.quit()
         return
 
+    film_id = execute(driver, "return filmID;")
     progress.add_one()
 
     login(driver, "jonathan.lichtermiron@gmail.com", "4090dina")
     progress.add_one()
 
-    select_subtitles(driver)
+    subs_id = select_subtitles(driver)
     progress.add_one()
 
     driver.quit()
-    file = helper.get_file(folder, lambda f:  f.endswith(".srt"))
-    system(f'ren "{file}" "{movie_name}.srt"')
+
+    if not download_subtitles(URL, film_id, subs_id, DOWNLOADS_PATH + "\\" + movie_name + ".srt"):
+        pop_msg("Error subtitles", "Could not download movie")
+
     progress.add_one()
 
 
-def call_main(movie_name: str, progress=helper.Progress(6)):
+def call_main(movie_name: str, progress=Progress(6)):
     try:
         main(movie_name, progress)
 
     except Exception as e:
-        helper.pop_msg("Error subtitles", "Unexpected error happened while downloading subtitles")
+        pop_msg("Error subtitles", "Unexpected error happened while downloading subtitles")
         progress.set_end()
+        print(e)
 
 
 if __name__ == "__main__":

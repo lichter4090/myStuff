@@ -1,12 +1,60 @@
+import selenium.webdriver.remote.webelement
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import OperationSystemManager
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as ec
+from time import sleep
+import requests
 from os import chdir, listdir, path
 from pathlib import Path
 from tkinter import messagebox
 from tkinter import ttk
 from tkinter import Label
+import json
+
+TORRENT_STEPS = "Connecting to website", "Searching movie", "Selecting torrent", "Downloading torrent", "File is in Downloads directory"
+SUBS_STEPS = "Connecting to website", "Searching movie", "Logging in", "Selecting best subtitles", "Downloading Subtitles", "File is in Downloads directory"
+WAIT = 5
+
+DOWNLOADS_PATH = str(Path.home() / 'Downloads')
 
 
-TORRENT_STEPS = "Connecting to website", "Searching movie", "Selecting torrent", "Renaming file", ""
-SUBS_STEPS = "Connecting to website", "Searching movie", "Logging in", "Selecting best subtitles", "Renaming file", ""
+def execute(driver: webdriver.Chrome, command: str):
+    return driver.execute_script(command)
+
+
+def get_element(driver: webdriver.Chrome, kind: By, search: str, clear: bool = False, multiple: bool = False, wait=WAIT) \
+        -> list[selenium.webdriver.remote.webelement.WebElement] | selenium.webdriver.remote.webelement.WebElement:
+
+    WebDriverWait(driver, wait).until(ec.presence_of_element_located((kind, search)))
+
+    if multiple:
+        e = driver.find_elements(kind, search)
+    else:
+        e = driver.find_element(kind, search)
+
+    if clear:
+        e.clear()
+
+    return e
+
+
+def get_element_if_contains(driver: webdriver.Chrome, kind: By, search: str, contain: str,
+                            func=lambda a, b: a.text == b) -> selenium.webdriver.remote.webelement.WebElement | None:
+    elements = get_element(driver, kind, search, False, True)
+    element = None
+
+    for elem in elements:
+        if func(elem, contain):
+            element = elem
+            break
+
+    return element
 
 
 def pop_msg(title, text):
@@ -59,13 +107,6 @@ class MonitorProcess:
             return self.progress_val.done()
 
         return True
-
-
-def change_dir_to(folder: str):
-    new_directory = Path.home() / 'Downloads'
-    chdir(new_directory)
-
-    return str(new_directory)
 
 
 def get_file(directory, func):

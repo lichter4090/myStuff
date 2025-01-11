@@ -33,6 +33,7 @@ def choosing_window():
     window.title("Downloading movie and subtitles")
     window.resizable(False, False)
     window.configure(background=BC)
+    window.iconbitmap("icon.ico")
 
     ## check box things ##
     subs = tk.IntVar()
@@ -99,6 +100,7 @@ def monitoring_window(progress_torrent=helper.Progress(1, -1), progress_subs=hel
     window.title("Downloading")
     window.resizable(False, False)
     window.configure(background=BC)
+    window.iconbitmap("icon.ico")
 
     ##  title  ##
     title = tk.Label(text="Downloading...", font=TITLE_FONT, background=BC)

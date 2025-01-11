@@ -1,15 +1,5 @@
-import selenium.webdriver.remote.webelement
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.core.os_manager import OperationSystemManager
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
-from time import sleep
-import requests
-import helper
+
+from helper import *
 
 
 class ChromeDriverManager64(ChromeDriverManager):
@@ -21,36 +11,6 @@ class ChromeDriverManager64(ChromeDriverManager):
 
 
 URL = "https://yts.mx/"
-WAIT = 5
-
-
-def get_element(driver: webdriver.Chrome, kind: By, search: str, clear: bool = False, multiple: bool = False) \
-        -> list[selenium.webdriver.remote.webelement.WebElement] | selenium.webdriver.remote.webelement.WebElement:
-
-    WebDriverWait(driver, WAIT).until(ec.presence_of_element_located((kind, search)))
-
-    if multiple:
-        e = driver.find_elements(kind, search)
-    else:
-        e = driver.find_element(kind, search)
-
-    if clear:
-        e.clear()
-
-    return e
-
-
-def get_element_if_contains(driver: webdriver.Chrome, kind: By, search: str, contain: str,
-                            func=lambda a, b: a.text == b) -> selenium.webdriver.remote.webelement.WebElement | None:
-    elements = get_element(driver, kind, search, False, True)
-    element = None
-
-    for elem in elements:
-        if func(elem, contain):
-            element = elem
-            break
-
-    return element
 
 
 def search_and_click(driver: webdriver.Chrome, movie_name: str):
@@ -69,7 +29,7 @@ def search_and_click(driver: webdriver.Chrome, movie_name: str):
             new_url = movie.get_attribute("href")
 
         except Exception:
-            helper.pop_msg("Error torrent", "Could not find movie")
+            pop_msg("Error torrent", "Could not find movie")
             return False
 
     driver.get(new_url)
@@ -114,16 +74,10 @@ def select_torrent(driver: webdriver.Chrome, movie: str):
 
     url_torrent = torrent.get_attribute("href")
 
-    r = requests.get(url_torrent, allow_redirects=True)
-
-    helper.change_dir_to('Downloads')
-    with open(f'{movie}.torrent', 'wb') as file:
-        file.write(r.content)
-
-    sleep(1)
+    return url_torrent
 
 
-def main(movie_name, progress=helper.Progress(5)):
+def main(movie_name, progress=Progress(5)):
     progress.add_one()
 
     chrome_driver_path = ChromeDriverManager(os_system_manager=OperationSystemManager("win32")).install()
@@ -148,20 +102,28 @@ def main(movie_name, progress=helper.Progress(5)):
 
     progress.add_one()
 
-    select_torrent(driver, movie_name)
+    url_torrent = select_torrent(driver, movie_name)
     progress.add_one()
 
     driver.quit()
+
+    r = requests.get(url_torrent, allow_redirects=True, stream=True)
+
+    with open(f'{DOWNLOADS_PATH}\\{movie_name}.torrent', 'wb') as file:
+        for chunk in r.iter_content(chunk_size=8192):  # Stream the file in chunks
+            file.write(chunk)
+
     progress.add_one()
 
 
-def call_main(movie_name: str, progress=helper.Progress(6)):
+def call_main(movie_name: str, progress=Progress(6)):
     try:
         main(movie_name, progress)
 
     except Exception as e:
-        helper.pop_msg("Error torrent", f"Unexpected error happened while downloading torrent")
+        pop_msg("Error torrent", f"Unexpected error happened while downloading torrent")
         progress.set_end()
+        print(e)
 
 
 if __name__ == "__main__":
